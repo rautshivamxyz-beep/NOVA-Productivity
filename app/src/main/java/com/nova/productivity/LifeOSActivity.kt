@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -190,10 +191,8 @@ fun NovaLifeOSApp() {
                     "Home" -> LifeHomeScreen(onNavigate = { page = it })
                     "Life" -> LifeCenterScreen()
                     "Money" -> MoneyCenterScreen()
-                    "Control" -> DeviceControlScreen(proxyRunning = proxyState.value, onProxyChange = {
-                        val context = it
-                    }, onOpenLegacy = { openLegacyNova(it) })
-                    else -> MoreCenterScreen(onOpenLegacy = { openLegacyNova(it) })
+                    "Control" -> DeviceControlScreen(proxyRunning = proxyState.value)
+                    else -> MoreCenterScreen()
                 }
             }
         }
@@ -512,7 +511,7 @@ private fun MoneyCenterScreen() {
 }
 
 @Composable
-private fun DeviceControlScreen(proxyRunning: Boolean, onProxyChange: (Boolean) -> Unit, onOpenLegacy: (String) -> Unit) {
+private fun DeviceControlScreen(proxyRunning: Boolean) {
     val context = LocalContext.current
     val storage = remember { runCatching { formatLifeBytes(StatFs(Environment.getDataDirectory().absolutePath).availableBytes) }.getOrDefault("Unavailable") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -546,8 +545,8 @@ private fun DeviceControlScreen(proxyRunning: Boolean, onProxyChange: (Boolean) 
                 Text("This proxy listens on this phone only. It is not a VPN and does not route every app.", color = lifeMuted, style = MaterialTheme.typography.labelSmall)
             }
         }
-        ActionCard(Icons.Default.Shield, "Private browser", "Open NOVA's built-in browser and offline blocker", "OPEN", { onOpenLegacy("Browser") })
-        ActionCard(Icons.Default.Apps, "Everyday tools", "Notes, password generator, SHA-256, calculator and converter", "OPEN", { onOpenLegacy("Tools") })
+        ActionCard(Icons.Default.Shield, "Private browser", "Open NOVA's built-in browser and offline blocker", "OPEN", { context.startActivity(Intent(context, MainActivity::class.java)) })
+        ActionCard(Icons.Default.Apps, "Everyday tools", "Notes, password generator, SHA-256, calculator and converter", "OPEN", { context.startActivity(Intent(context, MainActivity::class.java)) })
         ActionCard(Icons.Default.NetworkCheck, "Network diagnostics", "The next networking module will add connection tests and LAN discovery.", "ROADMAP", {})
         ActionCard(Icons.Default.Storage, "Phone storage", storage + " available in internal storage", "INFO", {})
         Text("System-wide firewalling, background automation and device-wide blocking need separate Android permissions and will be added as opt-in modules.", color = lifeMuted, style = MaterialTheme.typography.labelSmall)
@@ -555,13 +554,14 @@ private fun DeviceControlScreen(proxyRunning: Boolean, onProxyChange: (Boolean) 
 }
 
 @Composable
-private fun MoreCenterScreen(onOpenLegacy: (String) -> Unit) {
+private fun MoreCenterScreen() {
+    val context = LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("NOVA TOOLBOX", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text("One place for the original utilities and future NOVA modules.", color = lifeMuted)
-        ActionCard(Icons.Default.Apps, "Original NOVA tools", "Password generator, hashing, calculator, unit converter and quick note", "OPEN", { onOpenLegacy("Tools") })
-        ActionCard(Icons.Default.Shield, "Private browser", "WebView browser with bundled local ad and tracker filtering", "OPEN", { onOpenLegacy("Browser") })
-        ActionCard(Icons.Default.Router, "Proxy guide", "Open the original proxy and usage instructions", "OPEN", { onOpenLegacy("Proxy") })
+        ActionCard(Icons.Default.Apps, "Original NOVA tools", "Password generator, hashing, calculator, unit converter and quick note", "OPEN", { context.startActivity(Intent(context, MainActivity::class.java)) })
+        ActionCard(Icons.Default.Shield, "Private browser", "WebView browser with bundled local ad and tracker filtering", "OPEN", { context.startActivity(Intent(context, MainActivity::class.java)) })
+        ActionCard(Icons.Default.Router, "Proxy guide", "Open the original proxy and usage instructions", "OPEN", { context.startActivity(Intent(context, MainActivity::class.java)) })
         PanelCard("WHAT IS STORED LOCALLY", "NOVA saves your tasks, goals, habits, routines, transactions and timeline in app-private storage.") {
             Text("No NOVA account is required. The new Life OS data is not sent to a server. Backups and encrypted vault features are planned separately and are not included in this release.", color = lifeMuted, style = MaterialTheme.typography.bodySmall)
         }
@@ -569,11 +569,6 @@ private fun MoreCenterScreen(onOpenLegacy: (String) -> Unit) {
             Text("This is the first integrated release. Automation triggers, local servers, encrypted vault, DNS firewall and device bridge are future modules; they are not presented as finished features.", color = lifeMuted, style = MaterialTheme.typography.bodySmall)
         }
     }
-}
-
-@Composable
-private fun openLegacyNova(page: String) {
-    // Intentionally empty composable placeholder is not used.
 }
 
 private fun formatRupees(value: Double): String {
