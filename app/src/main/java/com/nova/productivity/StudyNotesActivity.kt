@@ -49,8 +49,8 @@ class StudyNotesActivity : ComponentActivity() {
     }
 }
 
-private data class PdfResult(val id: String, val title: String, val creator: String, val year: String, val description: String)
-private data class TopicArticle(val title: String, val extract: String, val url: String)
+private data class PdfResult(val id: String, val title: String, val creator: String, val year: String, val description: String, val downloads: Int)
+private data class TopicArticle(val title: String, val extract: String, val url: String, val sourceName: String)
 private data class SavedStudy(val id: String, val title: String, val kind: String, val category: String, val text: String, val source: String, val downloadId: Long)
 
 private object StudyStore {
@@ -95,69 +95,120 @@ private object StudyStore {
         }
         write(context, kept); return removed
     }
+    fun recentQueries(context: Context): List<String> {
+        val values = runCatching {
+            JSONArray(context.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString("recent_queries", "[]") ?: "[]")
+        }.getOrDefault(JSONArray())
+        return (0 until values.length()).map { values.optString(it) }.filter { it.isNotBlank() }
+    }
+
+    fun rememberQuery(context: Context, query: String) {
+        val clean = query.trim()
+        if (clean.isBlank()) return
+        val values = JSONArray()
+        (listOf(clean) + recentQueries(context).filterNot { it.equals(clean, true) }).take(8).forEach { values.put(it) }
+        context.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putString("recent_queries", values.toString()).apply()
+    }
+
 }
 
 private object StudySearch {
-    private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
+    private fun enc(value: String) = URLEncoder.encode(value, "UTF-8")
+
     private fun get(url: String): String {
-        val c = URL(url).openConnection() as HttpURLConnection
-        c.connectTimeout = 15000; c.readTimeout = 20000; c.instanceFollowRedirects = true
-        c.setRequestProperty("User-Agent", "NOVA-Productivity/0.4 Android study hub")
-        c.setRequestProperty("Accept", "application/json")
-        return try { c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() } } finally { c.disconnect() }
+        val connection = URL(url).openConnection() as HttpURLConnection
+        connection.connectTimeout = 14000
+        connection.readTimeout = 18000
+        connection.instanceFollowRedirects = true
+        connection.setRequestProperty("User-Agent", "NOVA-Productivity/0.5 Android education search")
+        connection.setRequestProperty("Accept", "application/json")
+        return try {
+            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
     }
-    fun pdfs(topic: String): List<PdfResult> {
-        val safe = topic.replace(Regex("[^A-Za-z0-9 ]"), " ").replace(Regex("\\s+"), " ").trim()
-        if (safe.isBlank()) return emptyList()
-        val q = "(title:(" + safe + ") OR subject:(" + safe + ") OR description:(" + safe +
-            ")) AND mediatype:texts AND format:pdf"
-        val url = "https://archive.org/advancedsearch.php?q=" + enc(q) +
-            "&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=year&fl[]=description&rows=15&page=1&output=json"
-        val docs = JSONObject(get(url)).optJSONObject("response")?.optJSONArray("docs") ?: JSONArray()
-        return (0 until docs.length()).mapNotNull { i ->
-            val o = docs.optJSONObject(i) ?: return@mapNotNull null
-            val id = o.optString("identifier")
+
+    fun pdfs(topic: String, page: Int = 1, exactPhrase: Boolean = false, popularFirst: Boolean = true): List<PdfResult> {
+        val clean = topic.replace(Regex("[^\\p{L}\\p{N} ]"), " ").replace(Regex("\\s+"), " ").trim()
+        if (clean.isBlank()) return emptyList()
+        val terms = Regex("[\\p{L}\\p{N}]{2,}").findAll(clean).map { it.value }.distinct().take(8).toList()
+        if (terms.isEmpty()) return emptyList()
+        val expression = if (exactPhrase) {
+            val phrase = clean.replace("\"", "")
+            "(title:\"$phrase\" OR subject:\"$phrase\" OR description:\"$phrase\")"
+        } else {
+            terms.joinToString(" OR ", "(", ")") { token ->
+                "(title:$token OR subject:$token OR description:$token)"
+            }
+        }
+        val query = "mediatype:texts AND (format:pdf OR format:\"Text PDF\") AND $expression"
+        val sort = if (popularFirst) "&sort[]=downloads%20desc" else "&sort[]=titleSorter%20asc"
+        val address = "https://archive.org/advancedsearch.php?q=" + enc(query) +
+            "&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=year&fl[]=description&fl[]=downloads" +
+            "&rows=20&page=" + page.coerceAtLeast(1) + sort + "&output=json"
+        val docs = JSONObject(get(address)).optJSONObject("response")?.optJSONArray("docs") ?: JSONArray()
+        return (0 until docs.length()).mapNotNull { index ->
+            val doc = docs.optJSONObject(index) ?: return@mapNotNull null
+            val id = doc.optString("identifier").trim()
             if (id.isBlank()) return@mapNotNull null
-            val d = o.opt("description")
-            val description = when (d) {
-                is JSONArray -> (0 until d.length()).joinToString(" ") { d.optString(it) }
-                is String -> d
+            val descriptionValue = doc.opt("description")
+            val description = when (descriptionValue) {
+                is JSONArray -> (0 until descriptionValue.length()).joinToString(" ") { descriptionValue.optString(it) }
+                is String -> descriptionValue
                 else -> ""
             }
-            val c = o.opt("creator")
-            val creator = when (c) {
-                is JSONArray -> (0 until c.length()).joinToString(", ") { c.optString(it) }
-                is String -> c
+            val creatorValue = doc.opt("creator")
+            val creator = when (creatorValue) {
+                is JSONArray -> (0 until creatorValue.length()).joinToString(", ") { creatorValue.optString(it) }
+                is String -> creatorValue
                 else -> ""
             }
-            PdfResult(id, o.optString("title", id), creator, o.optString("year"), description.take(240))
-        }
+            PdfResult(id, doc.optString("title", id).ifBlank { id }, creator, doc.optString("year"), description.take(260), doc.optInt("downloads", 0))
+        }.distinctBy { it.id }
     }
-    fun articles(topic: String): List<TopicArticle> {
-        val url = "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=" + enc(topic) +
-            "&gsrlimit=4&prop=extracts&exintro=1&explaintext=1&format=json&formatversion=2"
-        val pages = JSONObject(get(url)).optJSONObject("query")?.optJSONArray("pages") ?: JSONArray()
-        return (0 until pages.length()).mapNotNull { i ->
-            val p = pages.optJSONObject(i) ?: return@mapNotNull null
-            val title = p.optString("title"); val extract = p.optString("extract")
-            if (title.isBlank() || extract.isBlank()) return@mapNotNull null
-            TopicArticle(title, extract.take(6000), "https://en.wikipedia.org/wiki/" + Uri.encode(title.replace(' ', '_')))
+
+    fun learningResources(topic: String, language: String): List<TopicArticle> {
+        if (topic.isBlank()) return emptyList()
+        val code = if (language == "Hindi") "hi" else "en"
+        val projects = listOf(
+            Triple("$code.wikipedia.org", "Wikipedia", "https://$code.wikipedia.org/wiki/"),
+            Triple("$code.wikibooks.org", "Wikibooks", "https://$code.wikibooks.org/wiki/"),
+            Triple("$code.wikisource.org", "Wikisource", "https://$code.wikisource.org/wiki/")
+        )
+        val found = ArrayList<TopicArticle>()
+        projects.forEach { (host, source, baseUrl) ->
+            runCatching {
+                val api = "https://$host/w/api.php?action=query&generator=search&gsrsearch=" + enc(topic) +
+                    "&gsrlimit=4&prop=extracts&exintro=1&explaintext=1&format=json&formatversion=2"
+                val pages = JSONObject(get(api)).optJSONObject("query")?.optJSONArray("pages") ?: JSONArray()
+                for (index in 0 until pages.length()) {
+                    val page = pages.optJSONObject(index) ?: continue
+                    val title = page.optString("title").trim()
+                    val extract = page.optString("extract").trim()
+                    if (title.isBlank() || extract.isBlank()) continue
+                    found.add(TopicArticle(title, extract.take(5200), baseUrl + Uri.encode(title.replace(' ', '_')), source))
+                }
+            }
         }
+        return found.distinctBy { it.sourceName + ":" + it.title }.take(12)
     }
+
     fun pdfUrl(identifier: String): String? {
         val files = JSONObject(get("https://archive.org/metadata/" + enc(identifier))).optJSONArray("files") ?: return null
-        val options = ArrayList<Pair<Int, String>>()
-        for (i in 0 until files.length()) {
-            val f = files.optJSONObject(i) ?: continue
-            val name = f.optString("name")
-            if (!name.endsWith(".pdf", true) || f.optString("private").equals("true", true)) continue
-            options.add((if (f.optString("format").equals("Text PDF", true)) 0 else 1) to name)
+        val candidates = ArrayList<Pair<Int, String>>()
+        for (index in 0 until files.length()) {
+            val file = files.optJSONObject(index) ?: continue
+            val name = file.optString("name")
+            val isPrivate = file.optString("private").equals("true", true)
+            if (!name.endsWith(".pdf", ignoreCase = true) || isPrivate) continue
+            val score = if (file.optString("format").equals("Text PDF", true)) 0 else 1
+            candidates.add(score to name)
         }
-        val file = options.sortedBy { it.first }.firstOrNull()?.second ?: return null
-        return "https://archive.org/download/" + Uri.encode(identifier) + "/" + Uri.encode(file, "/")
+        val selected = candidates.sortedBy { it.first }.firstOrNull()?.second ?: return null
+        return "https://archive.org/download/" + Uri.encode(identifier) + "/" + Uri.encode(selected, "/")
     }
 }
-
 private val hubExecutor = Executors.newSingleThreadExecutor()
 private val hubHandler = Handler(Looper.getMainLooper())
 private fun <T> background(work: () -> T, done: (Result<T>) -> Unit) {
@@ -231,8 +282,16 @@ private fun StudyHubScreen() {
     val context = LocalContext.current
     var page by remember { mutableStateOf("Search") }
     var topic by remember { mutableStateOf("") }
-    var level by remember { mutableStateOf("Class 10") }
+    var level by remember { mutableStateOf("All levels") }
     var subject by remember { mutableStateOf("All") }
+    var language by remember { mutableStateOf("English") }
+    var searchMode by remember { mutableStateOf("Balanced") }
+    var contentFilter by remember { mutableStateOf("All") }
+    var popularFirst by remember { mutableStateOf(true) }
+    var loadingMore by remember { mutableStateOf(false) }
+    var pageNumber by remember { mutableStateOf(1) }
+    var lastSearch by remember { mutableStateOf("") }
+    var recent by remember { mutableStateOf(StudyStore.recentQueries(context)) }
     var busy by remember { mutableStateOf(false) }
     var busyId by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("") }
@@ -242,6 +301,8 @@ private fun StudyHubScreen() {
     var opened by remember { mutableStateOf<SavedStudy?>(null) }
     var ownTitle by remember { mutableStateOf("") }
     var ownText by remember { mutableStateOf("") }
+    val visiblePdfs = if (contentFilter == "Notes only") emptyList() else pdfs
+    val visibleArticles = if (contentFilter == "PDFs only") emptyList() else articles
     val library = remember(libraryVersion) { StudyStore.all(context) }
 
     MaterialTheme(colorScheme = darkColorScheme(
@@ -252,8 +313,8 @@ private fun StudyHubScreen() {
             Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = { (context as? Activity)?.finish() }) { Text("‹ Back", color = hubBlue) }
                 Column(Modifier.weight(1f)) {
-                    Text("NOVA STUDY HUB", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-                    Text("Free PDFs • Revision • Offline library", color = hubMuted, style = MaterialTheme.typography.labelSmall)
+                    Text("NOVA STUDY HUB", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp, style = MaterialTheme.typography.titleMedium)
+                    Text("DISCOVER • SAVE • LEARN OFFLINE", color = hubMuted, style = MaterialTheme.typography.labelSmall, letterSpacing = 0.6.sp)
                 }
                 Surface(color = Color(0xFF17443E), shape = RoundedCornerShape(30.dp)) {
                     Text("FREE", Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = hubMint, style = MaterialTheme.typography.labelSmall)
@@ -269,9 +330,17 @@ private fun StudyHubScreen() {
                     Text("Learn any topic", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text("Search public PDF collections, save revision notes and download files for offline use. No API key or account required.", color = hubMuted, style = MaterialTheme.typography.bodySmall)
                     OutlinedTextField(topic, { topic = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Enter a topic") }, placeholder = { Text("e.g. Electricity, Python, photosynthesis") }, singleLine = true)
+                    if (recent.isNotEmpty()) {
+                        Text("RECENT SEARCHES", color = hubMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            recent.forEach { savedQuery ->
+                                FilterChip(selected = false, onClick = { topic = savedQuery }, label = { Text(savedQuery) })
+                            }
+                        }
+                    }
                     Text("LEVEL", color = hubMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("Class 10", "Class 12", "School", "College", "Beginner", "Advanced").forEach {
+                        listOf("All levels", "Class 10", "Class 12", "School", "College", "Beginner", "Advanced").forEach {
                             FilterChip(selected = level == it, onClick = { level = it }, label = { Text(it) })
                         }
                     }
@@ -281,17 +350,44 @@ private fun StudyHubScreen() {
                             FilterChip(selected = subject == it, onClick = { subject = it }, label = { Text(it) })
                         }
                     }
+                    SearchFilterGroup("LANGUAGE", listOf("English", "Hindi"), language) { language = it }
+                    SearchFilterGroup("RESULT TYPE", listOf("All", "PDFs only", "Notes only"), contentFilter) { contentFilter = it }
+                    SearchFilterGroup("MATCH STYLE", listOf("Balanced", "Exact phrase"), searchMode) { searchMode = it }
+                    SearchFilterGroup("PDF ORDER", listOf("Most popular", "Title A–Z"), if (popularFirst) "Most popular" else "Title A–Z") {
+                        popularFirst = it == "Most popular"
+                    }
                     Button(
                         onClick = {
                             if (topic.isBlank()) status = "Enter a topic first."
                             else {
-                                val query = topic.trim() + if (subject == "All") "" else " " + subject
+                                val query = topic.trim() +
+                                    (if (subject == "All") "" else " " + subject) +
+                                    (if (level == "All levels") "" else " " + level)
+                                lastSearch = query
+                                pageNumber = 1
                                 busy = true; status = ""; pdfs = emptyList(); articles = emptyList()
-                                background({ Pair(StudySearch.pdfs(query), StudySearch.articles(query)) }) { result ->
+                                StudyStore.rememberQuery(context, topic.trim())
+                                recent = StudyStore.recentQueries(context)
+                                background({
+                                    Pair(
+                                        runCatching { StudySearch.pdfs(query, 1, searchMode == "Exact phrase", popularFirst) },
+                                        runCatching { StudySearch.learningResources(topic.trim(), language) }
+                                    )
+                                }) { result ->
                                     busy = false
-                                    result.onSuccess {
-                                        pdfs = it.first; articles = it.second
-                                        status = if (pdfs.isEmpty() && articles.isEmpty()) "No results. Try a shorter topic or use the official source shortcuts." else "Search finished. Verify the publisher and licence before reusing a file."
+                                    result.onSuccess { pair ->
+                                        pdfs = pair.first.getOrDefault(emptyList())
+                                        articles = pair.second.getOrDefault(emptyList())
+                                        val errors = buildList {
+                                            if (pair.first.isFailure) add("PDF search unavailable")
+                                            if (pair.second.isFailure) add("Text sources unavailable")
+                                        }
+                                        status = when {
+                                            pdfs.isEmpty() && articles.isEmpty() && errors.isNotEmpty() -> errors.joinToString(" • ") + ". Check your connection and try again."
+                                            pdfs.isEmpty() && articles.isEmpty() -> "No matches. Try Balanced search, fewer words or another language."
+                                            errors.isNotEmpty() -> "Partial results: " + errors.joinToString(" • ")
+                                            else -> "Found " + pdfs.size + " PDFs and " + articles.size + " text resources. Check each source and reuse terms."
+                                        }
                                     }.onFailure { status = "Search error: " + (it.message ?: "Network unavailable") }
                                 }
                             }
@@ -304,13 +400,13 @@ private fun StudyHubScreen() {
                         Text("Searching public sources…", color = hubMuted, style = MaterialTheme.typography.bodySmall)
                     }
                     if (status.isNotBlank()) Text(status, color = hubMuted, style = MaterialTheme.typography.bodySmall)
-                    if (pdfs.isNotEmpty()) {
-                        Text("PUBLIC PDF RESULTS • " + pdfs.size, color = hubMint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-                        pdfs.forEach { item ->
+                    if (visiblePdfs.isNotEmpty()) {
+                        Text("PUBLIC PDF RESULTS • " + visiblePdfs.size, color = hubMint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                        visiblePdfs.forEach { item ->
                             Card(colors = CardDefaults.cardColors(containerColor = hubCard), shape = RoundedCornerShape(16.dp)) {
                                 Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(item.title, color = Color.White, fontWeight = FontWeight.SemiBold)
-                                    Text(listOf(item.creator, item.year).filter { it.isNotBlank() }.joinToString(" • "), color = hubMuted, style = MaterialTheme.typography.labelSmall)
+                                    Text((listOf(item.creator, item.year).filter { it.isNotBlank() } + if (item.downloads > 0) listOf(item.downloads.toString() + " downloads") else emptyList()).joinToString(" • "), color = hubMuted, style = MaterialTheme.typography.labelSmall)
                                     if (item.description.isNotBlank()) Text(item.description, color = hubMuted, style = MaterialTheme.typography.bodySmall, maxLines = 3)
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text("Internet Archive", color = hubMuted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
@@ -329,11 +425,31 @@ private fun StudyHubScreen() {
                             }
                         }
                     }
-                    if (articles.isNotEmpty()) {
+                    if (visiblePdfs.size >= 20 && contentFilter != "Notes only") {
+                        OutlinedButton(
+                            onClick = {
+                                if (!loadingMore && lastSearch.isNotBlank()) {
+                                    loadingMore = true
+                                    background({ StudySearch.pdfs(lastSearch, pageNumber + 1, searchMode == "Exact phrase", popularFirst) }) { result ->
+                                        loadingMore = false
+                                        result.onSuccess { next ->
+                                            val merged = (pdfs + next).distinctBy { it.id }
+                                            if (merged.size == pdfs.size) status = "No more PDF results were returned."
+                                            else { pdfs = merged; pageNumber += 1 }
+                                        }.onFailure { status = "Could not load more PDFs: " + (it.message ?: "Network error") }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !loadingMore
+                        ) { Text(if (loadingMore) "Loading more…" else "Load more PDFs") }
+                    }
+                    if (visibleArticles.isNotEmpty()) {
                         Text("TOPIC EXPLAINERS • " + articles.size, color = hubMint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-                        articles.forEach { article ->
+                        visibleArticles.forEach { article ->
                             Card(colors = CardDefaults.cardColors(containerColor = hubCard), shape = RoundedCornerShape(16.dp)) {
                                 Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    Text(article.sourceName.uppercase(Locale.getDefault()), color = hubMint, style = MaterialTheme.typography.labelSmall)
                                     Text(article.title, color = Color.White, fontWeight = FontWeight.SemiBold)
                                     Text(article.extract.take(750), color = hubMuted, style = MaterialTheme.typography.bodySmall)
                                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -420,5 +536,23 @@ private fun StudyHubScreen() {
             confirmButton = { TextButton(onClick = { opened = null }) { Text("Close") } },
             containerColor = hubCard
         )
+    }
+}
+
+
+@Composable
+private fun SearchFilterGroup(
+    label: String,
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text(label, color = hubMuted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            options.forEach { option ->
+                FilterChip(selected = selected == option, onClick = { onSelect(option) }, label = { Text(option) })
+            }
+        }
     }
 }
