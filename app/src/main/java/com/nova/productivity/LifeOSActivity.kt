@@ -168,7 +168,7 @@ fun NovaLifeOSApp() {
                     "Control" to Icons.Default.Tune,
                     "More" to Icons.Default.Apps
                 )
-                NavigationBar(containerColor = Color(0xFF101927), tonalElevation = 0.dp)
+                NavigationBar(containerColor = Color(0xFF101927), tonalElevation = 0.dp) {
                     destinations.forEach { (name, icon) ->
                         NavigationBarItem(
                             selected = page == name,

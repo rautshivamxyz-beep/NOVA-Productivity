@@ -1,50 +1,47 @@
 # NOVA Productivity
 
-NOVA Productivity is a local-first Android life-control app. The 0.4.0 release adds a Study Hub to the 0.3.0 Life OS foundation. a unified Life OS dashboard with on-device planning and money tracking while retaining the original browser, local proxy and everyday tools.
+NOVA Productivity is a local-first Android control center. Version 0.5.0 refreshes the Life OS dashboard and improves the built-in Study Hub while retaining the existing proxy, browser and utilities.
 
-## Version 0.4.0 — Study Hub and offline learning library
+## Version 0.5.0 — Control Center redesign and Study Hub search
 
-- Search public Internet Archive collections for downloadable PDF material by topic.
-- Create quick revision notes and longer introductory notes from linked Wikipedia topic extracts.
-- Save personal notes locally and browse the offline library.
-- Download public PDFs through Android Download Manager into the phone Downloads folder.
+- Redesigned Home dashboard with a premium hero panel, quick-launch tiles, task and goal metrics, money overview, and on-device privacy/storage indicators.
+- Updated NOVA app-bar branding and navigation styling.
+- Study Hub now remembers recent searches on the phone.
+- Search filters include education level, subject, English/Hindi language, result type, balanced/exact phrase matching, and PDF sorting.
+- PDF discovery uses the public Internet Archive search API with popularity ordering and paginated results.
+- Open text references can be discovered from Wikipedia, Wikibooks and Wikisource in English or Hindi.
+- Download PDFs through Android Download Manager into the phone's Downloads folder.
+- Save quick revision extracts, longer source extracts and personal notes in NOVA's offline library.
 - Topic-search shortcuts for NCERT, DIKSHA, SWAYAM and OpenStax.
-- No API key, account or subscription is required for the built-in search and notes features.
+- No API key, subscription or NOVA account is required for the built-in search and note library.
 
-## Version 0.3.0 — Life OS foundation
+## Existing Life OS features
 
-- New five-area navigation: Home, Life, Money, Control and More.
-- Life Command Center with tasks, goal progress, daily habits and ready-made routine checklists.
-- Universal search across NOVA tasks, goals, habits, routines and the saved quick note.
-- Local life timeline records key actions taken in NOVA.
-- Money manager records manually entered income and expenses, categories and notes, with monthly totals and balance.
-- New device control area links to the existing local HTTP/SOCKS5 proxy, browser and utility tools.
-- App-private SharedPreferences JSON storage; no account or cloud service is required for these features.
-- Premium dark Compose interface designed for simple one-tap workflows.
-
-## Existing tools retained
-
-- On-device HTTP CONNECT and SOCKS5 forward proxy, bound to 127.0.0.1:8787 only.
-- User-started foreground service and persistent notification while the proxy is active.
+- Five-area navigation: Home, Life, Money, Control and More.
+- Tasks, goals, daily habits, ready-made routines, universal local search and a local activity timeline.
+- Manual income/expense tracking and monthly totals.
+- Existing on-device HTTP CONNECT and SOCKS5 proxy bound to 127.0.0.1:8787.
 - Built-in browser with bundled offline ad/tracker domain blocklist.
 - Quick notes, secure random password generator, SHA-256 hash tool, calculator and common unit conversions.
-- Read-only internal storage availability indicator.
+- Local-first SharedPreferences storage for Life OS and Study Hub metadata.
 
 ## Important limitations
 
-- The proxy listens only on the phone's loopback address. It is not a VPN and does not automatically route all phone traffic.
-- The browser and proxy blocker is not system-wide. System-wide filtering requires an opt-in Android VpnService implementation.
-- Study Hub searches public Internet Archive PDFs and Wikipedia introductory extracts. Search coverage is not universal; official-source shortcuts open topic searches, and each publisher controls availability and licensing. Revision notes are source-based extracts, not AI-written syllabus-complete notes.
-- Money records are manual personal records, not bank-synced statements. NOVA does not connect to a bank or initiate payments.
-- Routines in 0.3.0 are daily checklists, not automated Android actions. The automation engine is planned for a future release.
-- Encrypted vault, local web server, device bridge, backup/restore, advanced DNS firewall and full automation are future modules, not included in 0.3.0.
-- Android restrictions and permissions determine which device controls a third-party app can provide.
+- Study Hub searches the Internet Archive and Wikimedia project APIs; it cannot search every website or guarantee syllabus alignment.
+- Search-result availability and download rights vary by publisher. Open each source item page and check its licence/copyright terms before reusing or sharing a file.
+- Quick and detailed revision notes are source-based extracts, not AI-generated or syllabus-complete chapters.
+- NCERT, DIKSHA, SWAYAM and OpenStax shortcuts open topic searches on their websites; the provider controls the content and download availability.
+- Downloaded PDFs are stored by Android Download Manager in the phone's Downloads folder. Removing a PDF from NOVA's library also removes its associated Download Manager entry.
+- The local proxy is not a VPN and does not automatically route all phone traffic. The browser/proxy blocklist is not system-wide; system-wide filtering requires an opt-in Android VpnService.
+- Money records are manual and are not bank-synced. NOVA does not make payments.
+- Routines are checklists, not automated Android actions. Full device automation, encrypted vault, local web server, device bridge, backup/restore and advanced DNS firewall are future modules.
+- Android permissions and operating-system restrictions determine which device controls a third-party app can provide.
 
 ## Build
 
-Every push to main triggers the Android GitHub Actions workflow. After a successful run, open Actions, choose Android APK build, open the latest run, then download the NOVA-Productivity-debug-apk artifact.
+Every push to `main` triggers the Android GitHub Actions build. After a successful run, open Actions, select the latest **Android APK build**, then download the `NOVA-Productivity-debug-apk` artifact.
 
 Project package: `com.nova.productivity`  
 Minimum Android: 8.0 (API 26)  
 Target / compile SDK: 35  
-Version: 0.4.0
+Version: 0.5.0
