@@ -1,6 +1,15 @@
 # NOVA Productivity
 
-NOVA Productivity is a local-first Android life-control app. The 0.3.0 release introduces a unified Life OS dashboard with on-device planning and money tracking while retaining the original browser, local proxy and everyday tools.
+NOVA Productivity is a local-first Android life-control app. The 0.4.0 release adds a Study Hub to the 0.3.0 Life OS foundation. a unified Life OS dashboard with on-device planning and money tracking while retaining the original browser, local proxy and everyday tools.
+
+## Version 0.4.0 — Study Hub and offline learning library
+
+- Search public Internet Archive collections for downloadable PDF material by topic.
+- Create quick revision notes and longer introductory notes from linked Wikipedia topic extracts.
+- Save personal notes locally and browse the offline library.
+- Download public PDFs through Android Download Manager into the phone Downloads folder.
+- Topic-search shortcuts for NCERT, DIKSHA, SWAYAM and OpenStax.
+- No API key, account or subscription is required for the built-in search and notes features.
 
 ## Version 0.3.0 — Life OS foundation
 
@@ -25,6 +34,7 @@ NOVA Productivity is a local-first Android life-control app. The 0.3.0 release i
 
 - The proxy listens only on the phone's loopback address. It is not a VPN and does not automatically route all phone traffic.
 - The browser and proxy blocker is not system-wide. System-wide filtering requires an opt-in Android VpnService implementation.
+- Study Hub searches public Internet Archive PDFs and Wikipedia introductory extracts. Search coverage is not universal; official-source shortcuts open topic searches, and each publisher controls availability and licensing. Revision notes are source-based extracts, not AI-written syllabus-complete notes.
 - Money records are manual personal records, not bank-synced statements. NOVA does not connect to a bank or initiate payments.
 - Routines in 0.3.0 are daily checklists, not automated Android actions. The automation engine is planned for a future release.
 - Encrypted vault, local web server, device bridge, backup/restore, advanced DNS firewall and full automation are future modules, not included in 0.3.0.
@@ -37,4 +47,4 @@ Every push to main triggers the Android GitHub Actions workflow. After a success
 Project package: `com.nova.productivity`  
 Minimum Android: 8.0 (API 26)  
 Target / compile SDK: 35  
-Version: 0.3.0
+Version: 0.4.0

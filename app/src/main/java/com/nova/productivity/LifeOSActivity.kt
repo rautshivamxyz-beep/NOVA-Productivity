@@ -265,6 +265,7 @@ private fun LifeHomeScreen(onNavigate: (String) -> Unit) {
         item { ActionCard(Icons.Default.Checklist, "Tasks, goals and habits", "Plan your day and track progress", "OPEN", { onNavigate("Life") }) }
         item { ActionCard(Icons.Default.AccountBalanceWallet, "Money manager", "Record income, spending and savings", "OPEN", { onNavigate("Money") }) }
         item { ActionCard(Icons.Default.Tune, "Phone and network control", "Proxy, browser, storage and diagnostics", "OPEN", { onNavigate("Control") }) }
+        item { ActionCard(Icons.Default.Storage, "Free study notes", "Find free PDFs and keep revision notes offline", "OPEN", { context.startActivity(Intent(context, StudyNotesActivity::class.java)) }) }
         item {
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = lifeSurface)) {
                 Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -556,17 +557,19 @@ private fun DeviceControlScreen(proxyRunning: Boolean, onOpenLegacy: (String) ->
 
 @Composable
 private fun MoreCenterScreen(onOpenLegacy: (String) -> Unit) {
+    val context = LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("NOVA TOOLBOX", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text("One place for the original utilities and future NOVA modules.", color = lifeMuted)
+        ActionCard(Icons.Default.Storage, "Free study notes", "Search public PDFs, make revision notes and save them offline", "OPEN", { context.startActivity(Intent(context, StudyNotesActivity::class.java)) })
         ActionCard(Icons.Default.Apps, "Original NOVA tools", "Password generator, hashing, calculator, unit converter and quick note", "OPEN", { onOpenLegacy("Tools") })
         ActionCard(Icons.Default.Shield, "Private browser", "WebView browser with bundled local ad and tracker filtering", "OPEN", { onOpenLegacy("Browser") })
         ActionCard(Icons.Default.Router, "Proxy guide", "Open the original proxy and usage instructions", "OPEN", { onOpenLegacy("Proxy") })
-        PanelCard("WHAT IS STORED LOCALLY", "NOVA saves your tasks, goals, habits, routines, transactions and timeline in app-private storage.") {
+        PanelCard("WHAT IS STORED LOCALLY", "NOVA saves your tasks, goals, habits, routines, transactions, timeline and study notes in app-private storage.") {
             Text("No NOVA account is required. The new Life OS data is not sent to a server. Backups and encrypted vault features are planned separately and are not included in this release.", color = lifeMuted, style = MaterialTheme.typography.bodySmall)
         }
-        PanelCard("VERSION 0.3.0", "Life Command Center foundation") {
-            Text("This is the first integrated release. Automation triggers, local servers, encrypted vault, DNS firewall and device bridge are future modules; they are not presented as finished features.", color = lifeMuted, style = MaterialTheme.typography.bodySmall)
+        PanelCard("VERSION 0.4.0", "Study Hub and offline learning library") {
+            Text("Study Hub adds public PDF discovery, source-linked quick and detailed revision notes, personal notes and an offline library. Automation triggers, local servers, encrypted vault, DNS firewall and device bridge remain future modules.", color = lifeMuted, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
