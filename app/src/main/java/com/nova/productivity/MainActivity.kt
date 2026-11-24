@@ -50,7 +50,7 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { NovaApp() }
+        setContent { NovaApp(intent.getStringExtra("nova_page") ?: "Home") }
     }
 }
 
@@ -63,8 +63,8 @@ private val novaTextMuted = Color(0xFF9EADC2)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NovaApp() {
-    var page by remember { mutableStateOf("Home") }
+private fun NovaApp(initialPage: String = "Home") {
+    var page by remember { mutableStateOf(initialPage) }
     val proxyRunning by rememberProxyRunning()
     val colors = darkColorScheme(
         primary = novaBlue,
