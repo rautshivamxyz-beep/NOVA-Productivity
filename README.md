@@ -1,22 +1,35 @@
 # NOVA Productivity
 
-A non-AI Android utility app project. The initial build includes a dashboard, network status, proxy endpoint reachability check, Android Private DNS settings shortcut, local note field, secure random password generator, and SHA-256 utility.
+NOVA Productivity is an Android utility app designed to run its core features locally on the phone. It does not require a NOVA account, a paid proxy provider, or a NOVA cloud server.
 
-## Build an APK on GitHub
+## Included in version 0.2.0
 
-Every push to `main` triggers the Android GitHub Actions workflow. When it succeeds, open **Actions → Android APK build → latest successful run → Artifacts** and download `NOVA-Productivity-debug-apk`.
+- Premium dark control-center dashboard with connection and feature status.
+- On-device HTTP CONNECT and SOCKS5 forward proxy, bound to 127.0.0.1:8787 only.
+- User-started foreground service and persistent notification while the proxy is active.
+- Built-in browser with a bundled offline ad/tracker domain blocklist.
+- The same domain blocklist is applied to domain-based requests handled by the local proxy.
+- Quick notes saved on the device.
+- Secure random password generator.
+- SHA-256 text hashing.
+- Basic calculator and common unit conversions.
+- Read-only internal storage availability indicator.
 
-## Build locally
+## Important Android limits
 
-Open this repository in Android Studio (Giraffe or newer), allow Gradle sync, then choose **Build → Build APK(s)**.
+The proxy listens only on the phone's loopback address. Other devices on Wi-Fi cannot connect to it. Apps on the phone must support a manual HTTP or SOCKS5 proxy setting to use it. Android does not allow an ordinary app to silently change every other app's proxy settings.
 
-## Important feature boundaries
+The built-in blocklist filters requests made by NOVA's own browser and requests routed through NOVA's local proxy. It is not a system-wide ad blocker or firewall. System-wide filtering would require a separate Android VpnService packet-routing implementation and the user's explicit VPN approval. Apps using their own encrypted DNS or bypassing the proxy are not filtered.
 
-This is a starter implementation, not the complete planned super-app. Proxy profiles currently test TCP endpoint reachability only; they do not tunnel device traffic. DNS ad blocking, VPN routing, per-app firewall rules, packet inspection, ping/traceroute, and a full file manager are not implemented yet. Android permits only one active VPN service at a time, so VPN-based privacy features must be designed carefully.
+The domain list is bundled in the app and does not update itself from a cloud service. Websites still need an internet connection to load; "local" means NOVA's filtering logic and utility data stay on the device.
 
-## Project
+NOVA does not decrypt HTTPS traffic, install certificates, or inspect message contents.
 
-- Package: `com.nova.productivity`
-- Minimum Android: 8.0 (API 26)
-- Target / compile SDK: 35
-- Version: 0.1.0
+## Build
+
+Every push to main triggers the Android GitHub Actions workflow. After a successful run, open Actions, then Android APK build, then the latest run, then Artifacts and download NOVA-Productivity-debug-apk.
+
+Project package: com.nova.productivity  
+Minimum Android: 8.0 (API 26)  
+Target / compile SDK: 35  
+Version: 0.2.0
