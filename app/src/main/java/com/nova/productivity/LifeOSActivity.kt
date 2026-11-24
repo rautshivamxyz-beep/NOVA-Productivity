@@ -143,8 +143,8 @@ fun NovaLifeOSApp() {
                 TopAppBar(
                     title = {
                         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                            Text("NOVA", fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                            Text("LIFE CONTROL OS", color = lifeMuted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.4.sp)
+                            Text("NOVA", fontWeight = FontWeight.Black, letterSpacing = 2.4.sp, style = MaterialTheme.typography.titleLarge)
+                            Text("PRODUCTIVITY • PRIVACY • CONTROL", color = lifeMuted, style = MaterialTheme.typography.labelSmall, letterSpacing = 0.7.sp)
                         }
                     },
                     actions = {
@@ -168,7 +168,7 @@ fun NovaLifeOSApp() {
                     "Control" to Icons.Default.Tune,
                     "More" to Icons.Default.Apps
                 )
-                NavigationBar(containerColor = lifeSurface) {
+                NavigationBar(containerColor = Color(0xFF101927), tonalElevation = 0.dp)
                     destinations.forEach { (name, icon) ->
                         NavigationBarItem(
                             selected = page == name,
@@ -212,71 +212,142 @@ private fun LifeHomeScreen(onNavigate: (String) -> Unit) {
     val income = entries.filter { it.income }.sumOf { it.amount }
     val expense = entries.filter { !it.income }.sumOf { it.amount }
     val storage = remember { runCatching { formatLifeBytes(StatFs(Environment.getDataDirectory().absolutePath).availableBytes) }.getOrDefault("Unavailable") }
+    val dateLabel = DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault()).format(Date())
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(13.dp)
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 22.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF1B2D4D))) {
-                Column(Modifier.padding(19.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text("YOUR LIFE. ONE CONTROL CENTER.", color = lifeMint, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.2.sp)
-                    Text("Make today count.", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("Plan your day, track your goals and understand your money — privately on this phone.", color = Color(0xFFD5DFF4), style = MaterialTheme.typography.bodyMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Lock, null, tint = lifeMint, modifier = Modifier.size(15.dp))
-                        Text("LOCAL-FIRST • NO NOVA ACCOUNT", color = lifeMint, style = MaterialTheme.typography.labelSmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("YOUR CONTROL CENTER", color = lifeMuted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                    Text(dateLabel, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                }
+                Surface(shape = RoundedCornerShape(30.dp), color = Color(0xFF173B36)) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Lock, null, tint = lifeMint, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("ON-DEVICE", color = lifeMint, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        item {
+            Card(shape = RoundedCornerShape(25.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF1B2D4D)), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(19.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("NOVA / PERSONAL OS", color = lifeMint, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.3.sp, modifier = Modifier.weight(1f))
+                        Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF2B4165)) {
+                            Text("v0.5", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    Text("One place. More control.", color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+                    Text("Your tasks, money, learning and phone tools — organized in one private workspace.", color = Color(0xFFD5DFF4), style = MaterialTheme.typography.bodyMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { onNavigate("Life") }, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.Checklist, null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("My day")
+                        }
+                        OutlinedButton(onClick = { context.startActivity(Intent(context, StudyNotesActivity::class.java)) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                            Icon(Icons.Default.Storage, null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Study Hub")
+                        }
                     }
                 }
             }
         }
         item { SectionLabel("TODAY AT A GLANCE") }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SummaryCard("OPEN TASKS", open.toString(), "To do", Modifier.weight(1f))
-                SummaryCard("COMPLETED", done.toString(), "Finished", Modifier.weight(1f))
-                SummaryCard("ACTIVE GOALS", goals.count { it.progress < 100 }.toString(), "In progress", Modifier.weight(1f))
+                SummaryCard("DONE", done.toString(), "Completed", Modifier.weight(1f))
+                SummaryCard("GOALS", goals.count { it.progress < 100 }.toString(), "Active", Modifier.weight(1f))
             }
         }
         item {
-            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = lifeSurface)) {
-                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("MONEY SNAPSHOT", color = lifeMuted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
+            PanelCard("QUICK LAUNCH", "The tools you use most, one tap away.") {
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    DashboardTile(Icons.Default.Checklist, "Tasks & habits", "Plan your day", Modifier.weight(1f)) { onNavigate("Life") }
+                    DashboardTile(Icons.Default.AccountBalanceWallet, "Money", "Track spending", Modifier.weight(1f)) { onNavigate("Money") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    DashboardTile(Icons.Default.Tune, "Device control", "Proxy & browser", Modifier.weight(1f)) { onNavigate("Control") }
+                    DashboardTile(Icons.Default.Storage, "Study Hub", "Free notes & PDFs", Modifier.weight(1f)) {
+                        context.startActivity(Intent(context, StudyNotesActivity::class.java))
+                    }
+                }
+            }
+        }
+        item {
+            Card(shape = RoundedCornerShape(19.dp), colors = CardDefaults.cardColors(containerColor = lifeSurface)) {
+                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Income", color = lifeMuted, style = MaterialTheme.typography.bodySmall)
-                            Text(formatRupees(income), color = lifeMint, fontWeight = FontWeight.Bold)
+                            Text("MONEY OVERVIEW", color = lifeMuted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.1.sp)
+                            Text(formatRupees(income - expense), color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         }
-                        Column(Modifier.weight(1f)) {
-                            Text("Expenses", color = lifeMuted, style = MaterialTheme.typography.bodySmall)
-                            Text(formatRupees(expense), color = Color(0xFFFFA69A), fontWeight = FontWeight.Bold)
-                        }
-                        Column(Modifier.weight(1f)) {
-                            Text("Balance", color = lifeMuted, style = MaterialTheme.typography.bodySmall)
-                            Text(formatRupees(income - expense), color = Color.White, fontWeight = FontWeight.Bold)
+                        Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFF173B36)) {
+                            Icon(Icons.Default.AccountBalanceWallet, null, tint = lifeMint, modifier = Modifier.padding(10.dp).size(21.dp))
                         }
                     }
-                    OutlinedButton(onClick = { onNavigate("Money") }, modifier = Modifier.fillMaxWidth()) { Text("Open money manager"); Icon(Icons.Default.ArrowForward, null) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text("INCOME", color = lifeMuted, style = MaterialTheme.typography.labelSmall)
+                            Text(formatRupees(income), color = lifeMint, fontWeight = FontWeight.SemiBold)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("EXPENSES", color = lifeMuted, style = MaterialTheme.typography.labelSmall)
+                            Text(formatRupees(expense), color = Color(0xFFFFA69A), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    OutlinedButton(onClick = { onNavigate("Money") }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Open money manager")
+                        Spacer(Modifier.width(5.dp))
+                        Icon(Icons.Default.ArrowForward, null, modifier = Modifier.size(17.dp))
+                    }
                 }
             }
         }
-        item { SectionLabel("QUICK ACCESS") }
-        item { ActionCard(Icons.Default.Checklist, "Tasks, goals and habits", "Plan your day and track progress", "OPEN", { onNavigate("Life") }) }
-        item { ActionCard(Icons.Default.AccountBalanceWallet, "Money manager", "Record income, spending and savings", "OPEN", { onNavigate("Money") }) }
-        item { ActionCard(Icons.Default.Tune, "Phone and network control", "Proxy, browser, storage and diagnostics", "OPEN", { onNavigate("Control") }) }
-        item { ActionCard(Icons.Default.Storage, "Free study notes", "Find free PDFs and keep revision notes offline", "OPEN", { context.startActivity(Intent(context, StudyNotesActivity::class.java)) }) }
         item {
             Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = lifeSurface)) {
-                Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Storage, null, tint = lifeBlue, modifier = Modifier.size(23.dp))
+                Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = RoundedCornerShape(11.dp), color = lifeSurface2) {
+                        Icon(Icons.Default.Storage, null, tint = lifeBlue, modifier = Modifier.padding(10.dp).size(21.dp))
+                    }
                     Spacer(Modifier.width(11.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Available phone storage", fontWeight = FontWeight.SemiBold)
-                        Text(storage + " free", color = lifeMuted, style = MaterialTheme.typography.bodySmall)
+                        Text("PHONE STORAGE", color = lifeMuted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
+                        Text(storage + " available", color = Color.White, fontWeight = FontWeight.SemiBold)
                     }
+                    Icon(Icons.Default.Lock, null, tint = lifeMint, modifier = Modifier.size(17.dp))
                 }
             }
+        }
+        item {
+            Text("LOCAL-FIRST • Your NOVA life data stays in app storage. Online learning searches only run when you use Study Hub.", color = lifeMuted, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun DashboardTile(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    detail: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = lifeSurface2)) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFF2B4165)) {
+                Icon(icon, null, tint = lifeBlue, modifier = Modifier.padding(8.dp).size(19.dp))
+            }
+            Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+            Text(detail, color = lifeMuted, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
