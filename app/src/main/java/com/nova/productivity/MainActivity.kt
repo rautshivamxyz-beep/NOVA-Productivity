@@ -107,7 +107,7 @@ fun NetworkScreen() {
                 }
                 if (reachable) "Host and port reachable" else "Not reachable"
             } catch (e: Exception) { "Connection failed: ${e.message ?: "check host and port"}" }
-        }, enabled = host.isNotBlank() && port.toIntOrNull() in 1..65535) { Text("Test host / port") }
+        }, enabled = host.isNotBlank() && (port.toIntOrNull()?.let { it in 1..65535 } == true)) { Text("Test host / port") }
         Text(result)
         Text("This checks whether a TCP endpoint responds. It does not route device traffic through a proxy.", style = MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)) }) { Text("Open network settings") }
